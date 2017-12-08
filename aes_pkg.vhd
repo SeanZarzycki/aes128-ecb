@@ -12,7 +12,7 @@ package aes_pkg is
     subtype byte is std_logic_vector(7 downto 0);
     type word is array(0 to 3) of byte;
     type matrix is array (0 to MATRIX_DIM - 1, 0 to MATRIX_DIM - 1) of byte;
-
+    
 
 
     constant NK : natural := 4;
@@ -21,7 +21,27 @@ package aes_pkg is
 
     type keyType is array(0 to 4*NK - 1) of byte;
     type keySchedule is array(0 to Nb * (Nr + 1) - 1) of word;
-
+    type Block is array(0 to 4*Nb) of byte;
+    subtype byteval is integer range 0 to 255;
+    type byte_array is array(0 to 255) of byteval;
+    constant SBOX : byte_array := (
+    99, 124, 119, 123, 242, 107, 111, 197, 48, 1, 103, 43, 254, 215, 171, 118,
+    202, 130, 201, 125, 250, 89, 71, 240, 173, 212, 162, 175, 156, 164, 114, 192,
+    183, 253, 147, 38, 54, 63, 247, 204, 52, 165, 229, 241, 113, 216, 49, 21,
+    4, 199, 35, 195, 24, 150, 5, 154, 7, 18, 128, 226, 235, 39, 178, 117,
+    9, 131, 44, 26, 27, 110, 90, 160, 82, 59, 214, 179, 41, 227, 47, 132,
+    83, 209, 0, 237, 32, 252, 177, 91, 106, 203, 190, 57, 74, 76, 88, 207,
+    208, 239, 170, 251, 67, 77, 51, 133, 69, 249, 2, 127, 80, 60, 159, 168,
+    81, 163, 64, 143, 146, 157, 56, 245, 188, 182, 218, 33, 16, 255, 243, 210,
+    205, 12, 19, 236, 95, 151, 68, 23, 196, 167, 126, 61, 100, 93, 25, 115,
+    96, 129, 79, 220, 34, 42, 144, 136, 70, 238, 184, 20, 222, 94, 11, 219,
+    224, 50, 58, 10, 73, 6, 36, 92, 194, 211, 172, 98, 145, 149, 228, 121,
+    231, 200, 55, 109, 141, 213, 78, 169, 108, 86, 244, 234, 101, 122, 174, 8,
+    186, 120, 37, 46, 28, 166, 180, 198, 232, 221, 116, 31, 75, 189, 139, 138,
+    112, 62, 181, 102, 72, 3, 246, 14, 97, 53, 87, 185, 134, 193, 29, 158,
+    225, 248, 152, 17, 105, 217, 142, 148, 155, 30, 135, 233, 206, 85, 40, 223,
+    140, 161, 137, 13, 191, 230, 66, 104, 65, 153, 45, 15, 176, 84, 187, 22
+    );
 
     -- LUTs
     -- const MULT_2 : array (0 to 255) of byte is (
@@ -31,6 +51,11 @@ package aes_pkg is
     function SubWord(x : in Word) return Word;
     function RotWord(x : in Word) return Word;
     function KeyExpansion(key : in KeyType, constant nk : in natural) return keySchedule;
+    function Cipher(plaintext : in block) return block;
+    function SubBytes(state : in matrix) return matrix;
+    function ShiftRows(state : in matrix) return matrix;
+    function MixColumns(state : in matrix) return matrix;
+    function AddRoundKey(state : in matrix, w: in KeySchedule, roundNumber : in natural) return matrix;
 
 
     
@@ -63,5 +88,40 @@ package body aes_pkg is
             return w;
         end;
     
+    function SubWord(x : in Word) return Word is
+        variable sub : Word;
+        begin
+        for i in range'word loop
+            sub(i) = SBOX(to_integer(unsigned(x(i))));
+        end loop;
+        return sub;
+        end;
     
+    function RotWord(x : in Word) return Word is
+        variable rot: Word;
+        begin
+        return Word(x(1), x(2), x(3), x(0));
+        end;
+    function Cipher(plaintext : in block) return block is
+        variable ciphertext : block;
+        variable state : matrix;
+        variable w : matrix; -- keyschedule
+        begin
+            state := plaintext;
+            state := AddRoundKey(state, w(0)(Nb-1));
+
+            for r in 1 to Nr-1 loop
+                state := subBytes(state);
+                state := shiftrows(state);
+                state := mixColumns(state);
+                state := addRoundKey(state, w(r * Nb)(r + 1)*Nb - 1);
+            end loop;
+
+            state := subbytes(state);
+            state := shiftrows(state);
+            state := addroundkey(state, w(nr*nb)((nr+1)*nb-1));
+
+            return state;
+        end;    
+
 end aes_pkg;
