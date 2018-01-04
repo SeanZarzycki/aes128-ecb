@@ -40,6 +40,33 @@ begin
 end behavioral;
 
 
+use work.aes_pkg.all;
+
+entity state_sbox is
+    port (
+        x : in cipherblock;
+        z : out cipherblock
+    );
+end state_sbox;
+
+architecture struc of state_sbox is
+
+    component sbox
+        port ( 
+            x : in byte;
+            z : out byte
+        );
+    end component;
+
+    begin
+
+        GEN_SUB_BOX : for i in 0 to 15 generate
+            SUB_BOX : sbox 
+                port map (x => x(i), z => z(i));
+        end generate GEN_SUB_BOX;
+
+end struc;
+
     
 
 

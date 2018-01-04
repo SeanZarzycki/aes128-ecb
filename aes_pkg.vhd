@@ -208,37 +208,37 @@ package body aes_pkg is
         
 
         
-        function SubBytes(state : in cipherBlock) return cipherBlock is
-            variable sub : cipherblock;
-            begin
-            for i in 0 to 15 loop
-                sub(i) := std_logic_vector(to_unsigned(SBOX(to_integer(unsigned(state(i)))), 8));
-            end loop;
-            return sub;
-            end;
+    function SubBytes(state : in cipherBlock) return cipherBlock is
+        variable sub : cipherblock;
+        begin
+        for i in 0 to 15 loop
+            sub(i) := std_logic_vector(to_unsigned(SBOX(to_integer(unsigned(state(i)))), 8));
+        end loop;
+        return sub;
+        end;
 
-            function InvCipher(ciphertext : in cipherBlock; key : in cipherkey) return cipherBlock is
-                variable state : cipherBlock;
-                variable roundkey : cipherkey;
-                variable w : keyschedule := KeyExpansion(key, nk);
-                begin
-                    state := ciphertext;
-          
-                    state := AddRoundKey(state, w, 10);
+        function InvCipher(ciphertext : in cipherBlock; key : in cipherkey) return cipherBlock is
+            variable state : cipherBlock;
+            variable roundkey : cipherkey;
+            variable w : keyschedule := KeyExpansion(key, nk);
+            begin
+                state := ciphertext;
         
-                    for r in Nr-1 downto 1 loop
-                        state := invshiftrows(state);
-                        state := invsubBytes(state);
-                        state := addRoundKey(state, w, r);
-                        state := invmixColumns(state);
-                    end loop;
-                    
+                state := AddRoundKey(state, w, 10);
+    
+                for r in Nr-1 downto 1 loop
                     state := invshiftrows(state);
-                    state := invsubbytes(state);
-                    state := addroundkey(state, w, 0);
-        
-                    return state;
-                end; 
+                    state := invsubBytes(state);
+                    state := addRoundKey(state, w, r);
+                    state := invmixColumns(state);
+                end loop;
+                
+                state := invshiftrows(state);
+                state := invsubbytes(state);
+                state := addroundkey(state, w, 0);
+    
+                return state;
+            end; 
 
         function ShiftRows(s : in cipherBlock) return cipherBlock is
             variable ns : cipherblock;
@@ -253,133 +253,134 @@ package body aes_pkg is
                 return ns;
             end; 
             
-        function ShiftRow(stateRow : in word; rowNum : natural) return word is
-            variable shifted : word;
-            begin
-                for i in 0 to MATRIX_DIM - 1 loop
-                    shifted((i - rowNum + MATRIX_DIM) mod MATRIX_DIM) := stateRow(i);
-                end loop;
-                return shifted;
-            end;
-            
-        function InvShiftRow(stateRow : in word; rowNum : natural) return word is
-            variable shifted : word;
-            begin
-                for i in 0 to MATRIX_DIM - 1 loop
-                    shifted((i + rowNum + MATRIX_DIM) mod MATRIX_DIM) := stateRow(i);
-                end loop;
-                return shifted;
-            end;
-            
-        function MixColumns(state : in cipherBlock) return cipherBlock is
-            variable mixed : cipherblock;
-            variable col, col2 : word;
-            variable tmp, tm, t : byte;
-            begin
-                  for c in 0 to 3 loop
-                      mixed(c*4) := Gmul(x"02", state(c*4)) XOR GMul(x"03", state(c*4 + 1)) XOR state(c*4 + 2) XOR state(c*4 + 3);
-                      mixed(c*4 + 1) := state(c*4) XOR GMul(x"02", state(c*4 + 1)) XOR GMul(x"03",state(c*4 + 2)) XOR state(c*4 + 3);
-                      mixed(c*4 + 2) := state(c*4) XOR state(c*4 + 1) XOR GMul(x"02",state(c*4 + 2)) XOR GMul(x"03",state(c*4 + 3));
-                      mixed(c*4 + 3) := GMul(x"03",state(c*4)) XOR state(c*4 + 1) XOR state(c*4 + 2) XOR GMul(x"02",state(c*4 + 3));
-                  end loop;
-                return mixed;
-            end;
-            
-        function MixColumn(col : in word) return word is
-                variable mixed : word;
-                begin
-                mixed(0) := Gmul(x"02", col(0)) XOR GMul(x"03", col(1)) XOR col(2) XOR col(3);
-                                  mixed(1) := col(0) XOR GMul(x"02", col( + 1)) XOR GMul(x"03",col(2)) XOR col(3);
-                                  mixed(2) := col(0) XOR col(1) XOR GMul(x"02",col(2)) XOR GMul(x"03",col(3));
-                                  mixed(3) := GMul(x"03",col(0)) XOR col(1) XOR col(2) XOR GMul(x"02",col(3));
-                return mixed;
-                end;
+    function ShiftRow(stateRow : in word; rowNum : natural) return word is
+        variable shifted : word;
+        begin
+            for i in 0 to MATRIX_DIM - 1 loop
+                shifted((i - rowNum + MATRIX_DIM) mod MATRIX_DIM) := stateRow(i);
+            end loop;
+            return shifted;
+        end;
         
-
-        function AddRoundKey(state : in cipherBlock; RoundKey : keyschedule; roundNumber : natural) return cipherBlock is
-            variable NextState : CipherBlock;
-            begin
-
-                for i in 0 to 3 loop
-                    for j in 0 to 3 loop
-                        NextState(i * 4 + j) := 
-                        state(i * 4 + j) XOR 
-                        RoundKey((roundNumber * NB * 4) + (i * Nb) + j);
-                    end loop;
-                end loop;
-                return nextstate;
-            end;
-
-            function InvSubBytes(state : in cipherBlock) return cipherBlock is
-                variable sub : cipherblock;
-                begin
-                for i in 0 to state'length - 1 loop
-                    sub(i) := std_logic_vector(to_unsigned(RSBOX(to_integer(unsigned(state(i)))), 8));
-                end loop;
-                return sub;
-                end;
-    
-            function InvShiftRows(s : in cipherBlock) return cipherBlock is
-                variable ns : cipherblock;
-                begin
-                    ns := (s(0), s(13), s(10), s(7),
-                            s(4), s(1), s(14), s(11),
-                            s(8), s(5), s(2), s(15),
-                            s(12), s(9), s(6), s(3));
-                    return ns;
-                end;
-
-            function Multiply(x, y : in byte) return byte is
-                variable z : byte;
-                variable ux, uy : unsigned(7 downto 0);
-                variable uz : unsigned(15 downto 0);
-                begin
-                    ux := unsigned(x);
-                    uy := unsigned(y);
-                    
-                    uz := (((uy AND x"01") * ux) XOR
-                    ((shift_right(uy, 1) AND x"01") * unsigned(xtime(x))) XOR
-                    ((shift_right(uy, 2) AND x"01") * unsigned(xtime(xtime(x)))) XOR
-                    ((shift_right(uy, 3) AND x"01") * unsigned(xtime(xtime(xtime(x))))) XOR
-                    ((shift_right(uy, 4) AND x"01") * unsigned(xtime(xtime(xtime(xtime(x)))))));
-                    z := std_logic_vector(uz(7 downto 0));
-                    return z;
-                end;
-    
-            function InvMixColumn(col : in word) return word is
-                variable mixed : word;
-                variable a, b, c, d : byte;
-                begin
-                    
-                    for i in 0 to 3 loop
-                        a := col(0);
-                        b := col(1);
-                        c := col(2);
-                        d := col(3);
-    
-                        mixed(0) := Multiply(a, x"0e") XOR Multiply(b, x"0b") XOR Multiply(c, x"0d") XOR Multiply(d, x"09");
-                        mixed(1) := Multiply(a, x"09") XOR Multiply(b, x"0e") XOR Multiply(c, x"0b") XOR Multiply(d, x"0d");
-                        mixed(2) := Multiply(a, x"0d") XOR Multiply(b, x"09") XOR Multiply(c, x"0e") XOR Multiply(d, x"0b");
-                        mixed(3) := Multiply(a, x"0b") XOR Multiply(b, x"0d") XOR Multiply(c, x"09") XOR Multiply(d, x"0e");
-                    end loop;   
-                    return mixed;                   
-                end;
-    
-                function InvMixColumns(state : in cipherBlock) return cipherBlock is
-                    variable mixed : cipherblock;
-                    variable a, b, c, d : byte;
-                    begin
-                        for i in 0 to 3 loop
-                            a := state(i * 4);
-                            b := state(i * 4 + 1);
-                            c := state(i * 4 + 2);
-                            d := state(i * 4 + 3);
+    function InvShiftRow(stateRow : in word; rowNum : natural) return word is
+        variable shifted : word;
+        begin
+            for i in 0 to MATRIX_DIM - 1 loop
+                shifted((i + rowNum + MATRIX_DIM) mod MATRIX_DIM) := stateRow(i);
+            end loop;
+            return shifted;
+        end;
         
-                            mixed(i*4) := Multiply(a, x"0e") XOR Multiply(b, x"0b") XOR Multiply(c, x"0d") XOR Multiply(d, x"09");
-                            mixed(i*4 + 1) := Multiply(a, x"09") XOR Multiply(b, x"0e") XOR Multiply(c, x"0b") XOR Multiply(d, x"0d");
-                            mixed(i*4 + 2) := Multiply(a, x"0d") XOR Multiply(b, x"09") XOR Multiply(c, x"0e") XOR Multiply(d, x"0b");
-                            mixed(i*4 + 3) := Multiply(a, x"0b") XOR Multiply(b, x"0d") XOR Multiply(c, x"09") XOR Multiply(d, x"0e");
-                        end loop;   
-                        return mixed;         
-                    end;
+    function MixColumns(state : in cipherBlock) return cipherBlock is
+        variable mixed : cipherblock;
+        variable col, col2 : word;
+        variable tmp, tm, t : byte;
+        begin
+                for c in 0 to 3 loop
+                    mixed(c*4) := Gmul(x"02", state(c*4)) XOR GMul(x"03", state(c*4 + 1)) XOR state(c*4 + 2) XOR state(c*4 + 3);
+                    mixed(c*4 + 1) := state(c*4) XOR GMul(x"02", state(c*4 + 1)) XOR GMul(x"03",state(c*4 + 2)) XOR state(c*4 + 3);
+                    mixed(c*4 + 2) := state(c*4) XOR state(c*4 + 1) XOR GMul(x"02",state(c*4 + 2)) XOR GMul(x"03",state(c*4 + 3));
+                    mixed(c*4 + 3) := GMul(x"03",state(c*4)) XOR state(c*4 + 1) XOR state(c*4 + 2) XOR GMul(x"02",state(c*4 + 3));
+                end loop;
+            return mixed;
+        end;
+        
+    function MixColumn(col : in word) return word is
+            variable mixed : word;
+            begin
+            mixed(0) := Gmul(x"02", col(0)) XOR GMul(x"03", col(1)) XOR col(2) XOR col(3);
+                                mixed(1) := col(0) XOR GMul(x"02", col( + 1)) XOR GMul(x"03",col(2)) XOR col(3);
+                                mixed(2) := col(0) XOR col(1) XOR GMul(x"02",col(2)) XOR GMul(x"03",col(3));
+                                mixed(3) := GMul(x"03",col(0)) XOR col(1) XOR col(2) XOR GMul(x"02",col(3));
+            return mixed;
+            end;
+    
+
+    function AddRoundKey(state : in cipherBlock; RoundKey : keyschedule; roundNumber : natural) return cipherBlock is
+        variable NextState : CipherBlock;
+        begin
+
+            for i in 0 to 3 loop
+                for j in 0 to 3 loop
+                    NextState(i * 4 + j) := 
+                    state(i * 4 + j) XOR 
+                    RoundKey((roundNumber * NB * 4) + (i * Nb) + j);
+                end loop;
+            end loop;
+            return nextstate;
+        end;
+
+    function InvSubBytes(state : in cipherBlock) return cipherBlock is
+        variable sub : cipherblock;
+        begin
+        for i in 0 to state'length - 1 loop
+            sub(i) := std_logic_vector(to_unsigned(RSBOX(to_integer(unsigned(state(i)))), 8));
+        end loop;
+        return sub;
+        end;
+
+    function InvShiftRows(s : in cipherBlock) return cipherBlock is
+        variable ns : cipherblock;
+        begin
+            ns := (s(0), s(13), s(10), s(7),
+                    s(4), s(1), s(14), s(11),
+                    s(8), s(5), s(2), s(15),
+                    s(12), s(9), s(6), s(3));
+            return ns;
+        end;
+
+    function Multiply(x, y : in byte) return byte is
+        variable z : byte;
+        variable ux, uy : unsigned(7 downto 0);
+        variable uz : unsigned(15 downto 0);
+        begin
+            ux := unsigned(x);
+            uy := unsigned(y);
+            
+            uz := (((uy AND x"01") * ux) XOR
+            ((shift_right(uy, 1) AND x"01") * unsigned(xtime(x))) XOR
+            ((shift_right(uy, 2) AND x"01") * unsigned(xtime(xtime(x)))) XOR
+            ((shift_right(uy, 3) AND x"01") * unsigned(xtime(xtime(xtime(x))))) XOR
+            ((shift_right(uy, 4) AND x"01") * unsigned(xtime(xtime(xtime(xtime(x)))))));
+            z := std_logic_vector(uz(7 downto 0));
+            return z;
+        end;
+
+    function InvMixColumn(col : in word) return word is
+        variable mixed : word;
+        variable a, b, c, d : byte;
+        begin
+            
+            for i in 0 to 3 loop
+                a := col(0);
+                b := col(1);
+                c := col(2);
+                d := col(3);
+
+                mixed(0) := Multiply(a, x"0e") XOR Multiply(b, x"0b") XOR Multiply(c, x"0d") XOR Multiply(d, x"09");
+                mixed(1) := Multiply(a, x"09") XOR Multiply(b, x"0e") XOR Multiply(c, x"0b") XOR Multiply(d, x"0d");
+                mixed(2) := Multiply(a, x"0d") XOR Multiply(b, x"09") XOR Multiply(c, x"0e") XOR Multiply(d, x"0b");
+                mixed(3) := Multiply(a, x"0b") XOR Multiply(b, x"0d") XOR Multiply(c, x"09") XOR Multiply(d, x"0e");
+            end loop;   
+            return mixed;                   
+        end;
+
+    function InvMixColumns(state : in cipherBlock) return cipherBlock is
+        variable mixed : cipherblock;
+        variable a, b, c, d : byte;
+        begin
+            for i in 0 to 3 loop
+                a := state(i * 4);
+                b := state(i * 4 + 1);
+                c := state(i * 4 + 2);
+                d := state(i * 4 + 3);
+
+                mixed(i*4) := Multiply(a, x"0e") XOR Multiply(b, x"0b") XOR Multiply(c, x"0d") XOR Multiply(d, x"09");
+                mixed(i*4 + 1) := Multiply(a, x"09") XOR Multiply(b, x"0e") XOR Multiply(c, x"0b") XOR Multiply(d, x"0d");
+                mixed(i*4 + 2) := Multiply(a, x"0d") XOR Multiply(b, x"09") XOR Multiply(c, x"0e") XOR Multiply(d, x"0b");
+                mixed(i*4 + 3) := Multiply(a, x"0b") XOR Multiply(b, x"0d") XOR Multiply(c, x"09") XOR Multiply(d, x"0e");
+            end loop;   
+            return mixed;         
+        end;
+        
 end aes_pkg;
